@@ -1,0 +1,45 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches:
+      - "claude/**"
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed `
+            --name "EgyptianHoroscope" `
+            --hidden-import "app.systems.egyptian" `
+            --hidden-import "app.ai.generator" `
+            --hidden-import "app.systems.western" `
+            --hidden-import "app.systems.vedic" `
+            --hidden-import "app.systems.chinese" `
+            --hidden-import "dotenv" `
+            --hidden-import "anthropic" `
+            gui.py
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: EgyptianHoroscope-windows
+          path: dist/EgyptianHoroscope.exe
+          retention-days: 30
