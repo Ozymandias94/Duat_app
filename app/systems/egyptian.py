@@ -8,6 +8,41 @@ ancient Egyptian temple sources and scholarly reconstructions.
 
 from __future__ import annotations
 
+# Tunable configuration for this system's AI readings.
+# Edit these strings to refine how Claude generates Egyptian horoscopes
+# without touching any calculation or API logic.
+SYSTEM_CONFIG = {
+    # Appended to the base system prompt — change Claude's interpretive lens.
+    "system_prompt": (
+        "You are interpreting a birth sign from the Ancient Egyptian zodiac tradition, "
+        "rooted in the cosmology of the Nile Valley civilization. Each sign is governed by "
+        "a deity whose mythological role and domain directly color the person's nature. "
+        "Draw on Egyptian cosmological concepts: Ma'at (cosmic order and truth), the Duat "
+        "(the unseen spiritual realm), the Nile's seasonal cycles (Akhet/inundation, "
+        "Peret/growing, Shemu/harvest), and the interplay of Netjeru (divine forces). "
+        "Read today through the lens of which divine energy is active and how it relates "
+        "to the person's natal deity."
+    ),
+    # Injected into the user prompt — tells Claude which chart factors to foreground.
+    "reading_focus": (
+        "Center the reading on the person's governing deity and that deity's mythological "
+        "domain (e.g., Osiris governs resurrection and justice; Thoth governs wisdom and "
+        "writing). Connect the deity's qualities to the person's traits listed in the chart. "
+        "Then consider today's date within the Egyptian seasonal calendar and what divine "
+        "energy is cosmologically prominent. Let the myth speak to the mundane."
+    ),
+    # Tells Claude how to structure and style the output.
+    "presentation": (
+        "150–200 words. Second person throughout. "
+        "Tone: reverent, mythological, and slightly ritualistic — as if speaking from a "
+        "temple scribe's perspective, but still warm and personal. "
+        "Three beats: (1) the governing deity's energy as it manifests in the person today, "
+        "(2) a specific quality or challenge from the deity's myth that mirrors today's energy, "
+        "(3) a closing invocation or reflection — a single sentence that feels like a blessing "
+        "or orientation toward Ma'at."
+    ),
+}
+
 # Each sign has multiple non-contiguous date ranges (month, day).
 # Ranges are inclusive: [start, end].
 EGYPTIAN_SIGNS = [

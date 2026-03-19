@@ -8,6 +8,39 @@ from __future__ import annotations
 
 from datetime import date
 
+# Tunable configuration for this system's AI readings.
+# Edit these strings to refine how Claude generates BaZi horoscopes
+# without touching any calculation or API logic.
+SYSTEM_CONFIG = {
+    # Appended to the base system prompt — change Claude's interpretive lens.
+    "system_prompt": (
+        "You are interpreting a BaZi (Four Pillars of Destiny) chart within the Chinese "
+        "metaphysical tradition. Work with Five Elements theory (Wuxing): Wood, Fire, Earth, "
+        "Metal, Water in their Yang and Yin forms. The Day Master (the person's day stem) is "
+        "the self — all other pillars are read in relation to it. "
+        "Assess elemental balance: which elements strengthen vs. weaken the Day Master, "
+        "and how today's day pillar interacts with the natal chart through combinations, "
+        "clashes, harms, or harmonies."
+    ),
+    # Injected into the user prompt — tells Claude which chart factors to foreground.
+    "reading_focus": (
+        "Open with the Day Master's element and polarity as the person's core nature. "
+        "Identify which natal pillars produce, control, or exhaust the Day Master element. "
+        "Then compare today's Day Pillar (stem + branch) against the natal chart: "
+        "note any Six Harmonies (combinations), Six Clashes, or Three Harmonies that activate. "
+        "Let elemental dynamics — not just symbols — drive the daily narrative."
+    ),
+    # Tells Claude how to structure and style the output.
+    "presentation": (
+        "150–200 words. Second person throughout. "
+        "Use Chinese metaphysical terms naturally (Day Master, Heavenly Stem, Earthly Branch, "
+        "Wuxing, clash, harmony) but anchor each term with immediate meaning. "
+        "Three beats: (1) the Day Master's fundamental energy and how today amplifies or "
+        "challenges it, (2) a specific elemental dynamic to work with or navigate, "
+        "(3) a practical action or mindset aligned with today's qi."
+    ),
+}
+
 HEAVENLY_STEMS = ["Jiǎ", "Yǐ", "Bǐng", "Dīng", "Wù", "Jǐ", "Gēng", "Xīn", "Rén", "Guǐ"]
 
 STEM_ELEMENTS = [

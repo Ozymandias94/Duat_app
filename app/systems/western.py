@@ -2,6 +2,35 @@
 
 from __future__ import annotations
 
+# Tunable configuration for this system's AI readings.
+# Edit these strings to refine how Claude generates Western horoscopes
+# without touching any calculation or API logic.
+SYSTEM_CONFIG = {
+    # Appended to the base system prompt — change Claude's interpretive lens.
+    "system_prompt": (
+        "You are interpreting a Western tropical natal chart. "
+        "Work within the Western astrological tradition: tropical zodiac, Placidus houses, "
+        "classical and modern planetary rulerships, and aspect theory. "
+        "Ground the reading in the interplay of Sun, Moon, and Ascendant as the core identity "
+        "triad, and weave in the personal planets (Mercury, Venus, Mars) as secondary color."
+    ),
+    # Injected into the user prompt — tells Claude which chart factors to foreground.
+    "reading_focus": (
+        "Lead with the Sun sign's core drive, then layer in the Moon sign's emotional tone "
+        "and the Ascendant's outward style. Reference at least one personal planet placement "
+        "(Mercury, Venus, or Mars) that colors today's energy specifically. "
+        "Avoid listing every planet — synthesize rather than catalogue."
+    ),
+    # Tells Claude how to structure and style the output.
+    "presentation": (
+        "150–200 words. Second person throughout. "
+        "Three loose beats: (1) today's overarching tone, "
+        "(2) a specific opportunity or challenge to navigate, "
+        "(3) a closing reflection or practical suggestion. "
+        "Poetic but not flowery — grounded psychological language preferred."
+    ),
+}
+
 
 def get_western_chart(
     name: str,
