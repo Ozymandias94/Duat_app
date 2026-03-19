@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import date
+from functools import lru_cache
 
 import anthropic
 
@@ -11,6 +12,23 @@ from app.systems import western, vedic, chinese, egyptian
 
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 512
+
+# Lazy singleton — created on first call so dotenv is guaranteed to be loaded.
+_client: anthropic.Anthropic | None = None
+
+
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    return _client
+
+
+@lru_cache(maxsize=None)
+def _load_engine_file(path: str) -> str:
+    """Read an engine file from disk once; cache result for the process lifetime."""
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
 
 # Universal instructions that apply to every system.
 # Edit this to change behavior shared across all four traditions.
@@ -64,18 +82,22 @@ def generate_daily_reading(
     To tune a system's reading behavior, edit SYSTEM_CONFIG in the relevant
     app/systems/*.py module — no changes needed here.
     """
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
     module = _SYSTEM_MODULES[system]
     config = module.SYSTEM_CONFIG
     max_tokens = config.get("max_tokens", MAX_TOKENS)
+    chart_text = module.format_for_prompt(chart_data)
 
     engine_path = config.get("full_system_prompt")
     if engine_path:
-        with open(engine_path, "r", encoding="utf-8") as fh:
-            system_prompt = fh.read()
-
-        chart_text = module.format_for_prompt(chart_data)
+        # Egyptian full-engine path: entire engine file is the system prompt.
+        # Cached on disk read (lru_cache) and cached by the API (cache_control).
+        system_blocks = [
+            {
+                "type": "text",
+                "text": _load_engine_file(engine_path),
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
         user_prompt = (
             f"READING_TYPE: DAILY\n"
             f"PERSON_NAME: {person_name}\n"
@@ -88,8 +110,14 @@ def generate_daily_reading(
             f"and follow the daily reading structure from Section 8.4."
         )
     else:
-        system_prompt = BASE_SYSTEM_PROMPT + "\n\n" + config["system_prompt"]
-        chart_text = module.format_for_prompt(chart_data)
+        # Standard path (western / vedic / chinese): base + per-system config.
+        system_blocks = [
+            {
+                "type": "text",
+                "text": BASE_SYSTEM_PROMPT + "\n\n" + config["system_prompt"],
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
         system_name = _SYSTEM_NAMES[system]
         user_prompt = (
             f"Today is {today.strftime('%A, %B %d, %Y')}.\n\n"
@@ -99,10 +127,10 @@ def generate_daily_reading(
             f"Presentation:\n{config['presentation']}"
         )
 
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model=MODEL,
         max_tokens=max_tokens,
-        system=system_prompt,
+        system=system_blocks,
         messages=[{"role": "user", "content": user_prompt}],
     )
     return response.content[0].text
