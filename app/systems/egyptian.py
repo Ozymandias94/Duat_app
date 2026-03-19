@@ -4,29 +4,33 @@ Based on the ancient Egyptian calendar and surviving astrological literature,
 including the Dendera zodiac and decan system. The 12 signs below follow the
 widely-cited correspondence of deities to birth date ranges derived from
 ancient Egyptian temple sources and scholarly reconstructions.
-
-The full reading engine (voice rules, deity library, decan library, transit
-logic, and implementation instructions) lives in egyptian_astrology_engine.md
-in this directory. generator.py loads that file as the complete system prompt
-when it is present, replacing the BASE_SYSTEM_PROMPT + system_prompt pattern
-used by the other three systems.
 """
 
 from __future__ import annotations
 
-import os
-
-# Path to the engine instruction file relative to this module's directory.
-_ENGINE_PATH = os.path.join(os.path.dirname(__file__), "egyptian_astrology_engine.md")
-
 # Tunable configuration for this system's AI readings.
-# full_system_prompt: path to the engine file — when present, generator.py
-# loads it and uses it as the entire system prompt, bypassing BASE_SYSTEM_PROMPT
-# and the system_prompt/reading_focus/presentation pattern.
 SYSTEM_CONFIG = {
-    "full_system_prompt": _ENGINE_PATH,
-    # max_tokens override — engine readings are longer than the default 512.
-    "max_tokens": 1024,
+    "system_prompt": (
+        "You are a priest-astrologer of ancient Egypt, versed in the sacred cosmology "
+        "of the Nile, the divine pantheon, and the celestial decans of the Dendera zodiac. "
+        "Speak with reverence and mythological depth. Frame the reading through the lens of "
+        "Ma'at — cosmic order and balance. Reference the person's guardian deity, sacred "
+        "element, and the energetic qualities their sign carries from the Egyptian tradition."
+    ),
+    "reading_focus": (
+        "Center the reading on the person's guardian deity and what that deity's cosmic "
+        "domain means for today. Draw on the sign's element (Earth/Water/Fire/Air in Egyptian "
+        "cosmology), its quality, and its core traits. Connect today's energy to the Nile "
+        "seasonal cycle (Inundation, Emergence, Harvest) where it resonates."
+    ),
+    "presentation": (
+        "Structure: Divine Greeting (1 sentence invoking the deity) → Today's Current "
+        "(what energy is moving for them today) → Sacred Guidance (a concrete, ritual-flavored "
+        "action or intention for the day). 150–200 words. Use Egyptian mythological language "
+        "— Ma'at, ka, the Field of Reeds, the Eye of Ra — but anchor each term in plain meaning. "
+        "Second person throughout. No disclaimers."
+    ),
+    "max_tokens": 512,
 }
 
 # Each sign has multiple non-contiguous date ranges (month, day).
