@@ -14,7 +14,11 @@ used by the other three systems.
 
 from __future__ import annotations
 
+import datetime
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 # Path to the engine instruction file relative to this module's directory.
 _ENGINE_PATH = os.path.join(os.path.dirname(__file__), "egyptian_astrology_engine.md")
@@ -174,6 +178,31 @@ def get_egyptian_sign(month: int, day: int) -> dict:
         "quality": "Unknown",
         "traits": [],
     }
+
+
+def _verify_date_coverage() -> None:
+    """Warn if any calendar day has no corresponding Egyptian sign.
+
+    Runs once at import time. A gap means EGYPTIAN_SIGNS date ranges are
+    incomplete — the affected dates will return the 'Unknown' fallback sign.
+    """
+    year = 2001  # non-leap year; covers all standard month/day combos
+    day = datetime.date(year, 1, 1)
+    gaps: list[str] = []
+    while day.year == year:
+        sign = get_egyptian_sign(day.month, day.day)
+        if sign["sign"] == "Unknown":
+            gaps.append(f"{day.month}/{day.day}")
+        day += datetime.timedelta(days=1)
+    if gaps:
+        logger.warning(
+            "Egyptian date coverage gaps detected (%d days): %s",
+            len(gaps),
+            ", ".join(gaps),
+        )
+
+
+_verify_date_coverage()
 
 
 def format_for_prompt(chart: dict) -> str:
