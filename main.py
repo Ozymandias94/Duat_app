@@ -14,8 +14,8 @@ logging.basicConfig(
 from app.routers import horoscope
 
 app = FastAPI(
-    title="AI Horoscope API",
-    description="Personalized daily horoscope readings powered by Claude across Western, Vedic, Chinese, and Egyptian traditions.",
+    title="Duat",
+    description="Personalized daily readings in the ancient Egyptian tradition, powered by Claude.",
     version="1.0.0",
 )
 
