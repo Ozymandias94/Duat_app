@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import date
 
@@ -9,7 +10,10 @@ import anthropic
 
 from app.systems import western, vedic, chinese, egyptian
 
+logger = logging.getLogger(__name__)
+
 MODEL = "claude-sonnet-4-6"
+FALLBACK_MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 512
 
 # Universal instructions that apply to every system.
@@ -39,6 +43,29 @@ _SYSTEM_NAMES = {
     "chinese": "Chinese BaZi (Four Pillars of Destiny)",
     "egyptian": "Ancient Egyptian Astrology",
 }
+
+
+def _call_claude(client: anthropic.Anthropic, *, model: str, max_tokens: int, system: str, messages: list) -> str:
+    """Call Claude with automatic fallback to FALLBACK_MODEL on model errors."""
+    try:
+        response = client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        )
+        return response.content[0].text
+    except (anthropic.NotFoundError, anthropic.BadRequestError) as exc:
+        if model == FALLBACK_MODEL:
+            raise
+        logger.warning("Primary model %s unavailable (%s), retrying with %s", model, exc, FALLBACK_MODEL)
+        response = client.messages.create(
+            model=FALLBACK_MODEL,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        )
+        return response.content[0].text
 
 
 def generate_daily_reading(
@@ -99,10 +126,13 @@ def generate_daily_reading(
             f"Presentation:\n{config['presentation']}"
         )
 
-    response = client.messages.create(
+    logger.info("Calling Claude: system=%s model=%s max_tokens=%d", system, MODEL, max_tokens)
+    text = _call_claude(
+        client,
         model=MODEL,
         max_tokens=max_tokens,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
     )
-    return response.content[0].text
+    logger.info("Reading generated: system=%s chars=%d", system, len(text))
+    return text

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 
 from fastapi import APIRouter, HTTPException
@@ -10,6 +11,8 @@ from app import cache
 from app.ai import generator
 from app.models.schemas import HoroscopeRequest, HoroscopeResponse, SystemInfo, SystemReading
 from app.systems import chinese, egyptian, vedic, western
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/horoscope", tags=["horoscope"])
 
@@ -52,16 +55,10 @@ def list_systems():
 
 @router.post("/daily", response_model=HoroscopeResponse)
 def daily_horoscope(req: HoroscopeRequest):
-    try:
-        birth = date.fromisoformat(req.birth_date)
-    except ValueError:
-        raise HTTPException(status_code=422, detail="birth_date must be YYYY-MM-DD")
-
-    try:
-        t_parts = req.birth_time.split(":")
-        birth_hour, birth_minute = int(t_parts[0]), int(t_parts[1])
-    except (ValueError, IndexError):
-        raise HTTPException(status_code=422, detail="birth_time must be HH:MM")
+    # Validated by Pydantic — safe to parse directly.
+    birth = date.fromisoformat(req.birth_date)
+    birth_hour = int(req.birth_time[:2])
+    birth_minute = int(req.birth_time[3:])
 
     today = date.today()
     readings: dict[str, SystemReading] = {}
@@ -70,13 +67,12 @@ def daily_horoscope(req: HoroscopeRequest):
         cache_key = cache.make_key(system, req.name, req.birth_date, req.birth_time)
         cached = cache.get(cache_key)
         if cached:
-            # We still need chart_data for the response — recompute (cheap)
-            chart_data = _compute_chart(
-                system, req, birth, birth_hour, birth_minute
-            )
+            logger.info("Cache hit: system=%s name=%s", system, req.name)
+            chart_data = _compute_chart(system, req, birth, birth_hour, birth_minute)
             readings[system] = SystemReading(chart_data=chart_data, daily_reading=cached)
             continue
 
+        logger.info("Generating reading: system=%s name=%s", system, req.name)
         chart_data = _compute_chart(system, req, birth, birth_hour, birth_minute)
         reading_text = generator.generate_daily_reading(system, chart_data, req.name, today)
         cache.set(cache_key, reading_text)
@@ -90,27 +86,36 @@ def daily_horoscope(req: HoroscopeRequest):
 
 
 def _compute_chart(system: str, req: HoroscopeRequest, birth: date, hour: int, minute: int) -> dict:
-    if system == "western":
-        return western.get_western_chart(
-            name=req.name,
-            year=birth.year, month=birth.month, day=birth.day,
-            hour=hour, minute=minute,
-            lat=req.birth_lat, lng=req.birth_lng,
-            tz_str=req.birth_tz,
-        )
-    elif system == "vedic":
-        return vedic.get_vedic_chart(
-            name=req.name,
-            year=birth.year, month=birth.month, day=birth.day,
-            hour=hour, minute=minute,
-            lat=req.birth_lat, lng=req.birth_lng,
-            tz_str=req.birth_tz,
-        )
-    elif system == "chinese":
-        return chinese.get_bazi_chart(
-            year=birth.year, month=birth.month, day=birth.day, hour=hour
-        )
-    elif system == "egyptian":
-        return egyptian.get_egyptian_sign(month=birth.month, day=birth.day)
-    else:
-        raise HTTPException(status_code=422, detail=f"Unknown system: {system}")
+    try:
+        if system == "western":
+            return western.get_western_chart(
+                name=req.name,
+                year=birth.year, month=birth.month, day=birth.day,
+                hour=hour, minute=minute,
+                lat=req.birth_lat, lng=req.birth_lng,
+                tz_str=req.birth_tz,
+            )
+        elif system == "vedic":
+            return vedic.get_vedic_chart(
+                name=req.name,
+                year=birth.year, month=birth.month, day=birth.day,
+                hour=hour, minute=minute,
+                lat=req.birth_lat, lng=req.birth_lng,
+                tz_str=req.birth_tz,
+            )
+        elif system == "chinese":
+            return chinese.get_bazi_chart(
+                year=birth.year, month=birth.month, day=birth.day, hour=hour
+            )
+        elif system == "egyptian":
+            return egyptian.get_egyptian_sign(month=birth.month, day=birth.day)
+        else:
+            raise HTTPException(status_code=422, detail=f"Unknown system: {system}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Chart computation failed: system=%s error=%s", system, exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to compute {system} chart. Check server logs for details.",
+        ) from exc
