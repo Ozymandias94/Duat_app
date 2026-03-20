@@ -10,34 +10,13 @@ from fastapi import APIRouter, HTTPException
 from app import cache
 from app.ai import generator
 from app.models.schemas import HoroscopeRequest, HoroscopeResponse, SystemInfo, SystemReading
-from app.systems import chinese, egyptian, vedic, western
+from app.systems import egyptian
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/horoscope", tags=["horoscope"])
 
 SYSTEM_INFO = [
-    SystemInfo(
-        id="western",
-        name="Western Astrology",
-        description="Tropical zodiac natal chart using Swiss Ephemeris. Includes Sun, Moon, Ascendant, and seven classical + three modern planets.",
-        requires_time=True,
-        requires_location=True,
-    ),
-    SystemInfo(
-        id="vedic",
-        name="Vedic Astrology (Jyotish)",
-        description="Sidereal zodiac with Lahiri ayanamsha and Whole Sign houses. Includes Nakshatra placement of the Moon.",
-        requires_time=True,
-        requires_location=True,
-    ),
-    SystemInfo(
-        id="chinese",
-        name="Chinese BaZi",
-        description="Four Pillars of Destiny using the 60-Jiazi sexagenary cycle of Heavenly Stems and Earthly Branches.",
-        requires_time=True,
-        requires_location=False,
-    ),
     SystemInfo(
         id="egyptian",
         name="Egyptian Astrology",
@@ -87,32 +66,7 @@ def daily_horoscope(req: HoroscopeRequest):
 
 def _compute_chart(system: str, req: HoroscopeRequest, birth: date, hour: int, minute: int) -> dict:
     try:
-        if system == "western":
-            return western.get_western_chart(
-                name=req.name,
-                year=birth.year, month=birth.month, day=birth.day,
-                hour=hour, minute=minute,
-                lat=req.birth_lat, lng=req.birth_lng,
-                tz_str=req.birth_tz,
-            )
-        elif system == "vedic":
-            return vedic.get_vedic_chart(
-                name=req.name,
-                year=birth.year, month=birth.month, day=birth.day,
-                hour=hour, minute=minute,
-                lat=req.birth_lat, lng=req.birth_lng,
-                tz_str=req.birth_tz,
-            )
-        elif system == "chinese":
-            return chinese.get_bazi_chart(
-                year=birth.year, month=birth.month, day=birth.day, hour=hour
-            )
-        elif system == "egyptian":
-            return egyptian.get_egyptian_sign(month=birth.month, day=birth.day)
-        else:
-            raise HTTPException(status_code=422, detail=f"Unknown system: {system}")
-    except HTTPException:
-        raise
+        return egyptian.get_egyptian_sign(month=birth.month, day=birth.day)
     except Exception as exc:
         logger.error("Chart computation failed: system=%s error=%s", system, exc, exc_info=True)
         raise HTTPException(

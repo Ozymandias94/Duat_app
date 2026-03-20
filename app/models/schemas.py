@@ -7,7 +7,7 @@ from typing import Any, Literal
 import pytz
 from pydantic import BaseModel, Field, field_validator
 
-SystemName = Literal["western", "vedic", "chinese", "egyptian"]
+SystemName = Literal["egyptian"]
 
 
 class HoroscopeRequest(BaseModel):
@@ -18,7 +18,7 @@ class HoroscopeRequest(BaseModel):
     birth_lng: float = Field(..., description="Birth longitude in decimal degrees")
     birth_tz: str = Field(..., description="IANA timezone string, e.g. 'America/New_York'")
     systems: list[SystemName] = Field(
-        default=["western", "vedic", "chinese", "egyptian"],
+        default=["egyptian"],
         description="Which astrological systems to include",
     )
 
